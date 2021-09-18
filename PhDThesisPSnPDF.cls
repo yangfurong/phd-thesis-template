@@ -252,6 +252,12 @@ supported!}
 \RequirePackage{ifpdf}    % Check for pdfLaTeX
 \RequirePackage{ifxetex}  % XeLaTeX
 
+\RequirePackage{multirow}
+\RequirePackage{multicol}
+\RequirePackage{etoolbox}
+\RequirePackage{pgffor}
+\RequirePackage{array}
+
 % *********************** Table of Contents & Appendices ***********************
 % add Bibliography, List of figures and tables to contents
 \RequirePackage[nottoc]{tocbibind}
@@ -814,6 +820,10 @@ wish to left align your text}
 % These macros are used to declare arguments needed for the
 % construction of the title page and other preamble.
 
+% Major
+\newcommand{\@specialite}{}
+\newcommand{\specialite}[1]{\renewcommand{\@specialite}{#1}}
+
 % Subtitle (optional)
 \newcommand{\@subtitle}{}
 \newcommand{\subtitle}[1]{\renewcommand{\@subtitle}{#1}}
@@ -831,16 +841,25 @@ wish to left align your text}
 \newcommand{\dept}[1]{\renewcommand{\@dept}{#1}}
 
 % The name of your college (eg. King's)
-\newcommand{\@college}{}
-\newcommand{\college}[1]{\renewcommand{\@college}{#1}}
+\newcommand{\@lab}{}
+\newcommand{\lab}[1]{\renewcommand{\@lab}{#1}}
 
 % The name of your University
 \newcommand{\@university}{}
 \newcommand{\university}[1]{\renewcommand{\@university}{#1}}
 
-% Defining the crest
-\newcommand{\@crest}{}
-\newcommand{\crest}[1]{\renewcommand{\@crest}{#1}}
+% Defining the logos
+\newcommand{\@firstlogo}{}
+\newcommand{\firstlogo}[1]{\renewcommand{\@firstlogo}{#1}}
+
+\newcommand{\@secondlogo}{}
+\newcommand{\secondlogo}[1]{\renewcommand{\@secondlogo}{#1}}
+
+\newcommand{\@thirdlogo}{}
+\newcommand{\thirdlogo}[1]{\renewcommand{\@thirdlogo}{#1}}
+
+\newcommand{\@fourthlogo}{}
+\newcommand{\fourthlogo}[1]{\renewcommand{\@fourthlogo}{#1}}
 
 % Defining the college crest
 \newif\ifPHD@collegeshield\PHD@collegeshieldfalse
@@ -874,7 +893,25 @@ wish to left align your text}
 \newcommand{\advisorlinewidth}[1]{\renewcommand{\@advisorlinewidth}{#1}}
 
 % Submission Text
-\newcommand{\submissiontext}{This dissertation is submitted for the degree of }
+\newcommand{\submissiontext}{Pour obtenir le grade de}
+
+% Jury
+\newcommand{\@njurymembers}{0}
+\newcommand{\njurymembers}[1]{\renewcommand{\@njurymembers}{#1}}
+\newcommand{\addjurymember}[6]{%
+	\expandafter\gdef\csname @juryTitle#1\endcsname{#2}
+	\expandafter\gdef\csname @juryName#1\endcsname{#3}
+  \expandafter\gdef\csname @juryPosition#1\endcsname{#4}
+  \expandafter\gdef\csname @juryAffiliation#1\endcsname{#5}
+	\expandafter\gdef\csname @juryFunction#1\endcsname{#6}
+}
+
+\newtoks\@tabtoks
+\newcommand\addtabtoks[1]{\global\@tabtoks\expandafter{\the\@tabtoks#1}}
+\newcommand\eaddtabtoks[1]{\edef\mytmp{#1}\expandafter\addtabtoks\expandafter{\mytmp}}
+\newcommand*\resettabtoks{\global\@tabtoks{}}
+\newcommand*\printtabtoks{\the\@tabtoks}
+
 
 % keywords (These keywords will appear in the PDF meta-information
 % called `pdfkeywords`.)
@@ -941,27 +978,44 @@ wish to left align your text}
 	\vspace{.15\PHD@titlepagespacing}
 \fi
 
-% Title
-{\usebox{\PHD@Title}} % subtitle is defined
-
-
 % Crest
-
 \ifPHD@collegeshield%
 	\vspace{.15\PHD@titlepagespacing}
 	{\usebox{\PHD@collegecrest}}
 	\vspace{.1\PHD@titlepagespacing}
 \else
-	\vspace{.25\PHD@titlepagespacing}
+	%\vspace{.25\PHD@titlepagespacing}
 	{\usebox{\PHD@crest}}
-	\vspace{.15\PHD@titlepagespacing}
+	\vspace{.05\PHD@titlepagespacing}
 \fi
 
+{\usebox{\PHD@ThesisPrefix}
+\vspace*{2em}}
 
+{\usebox{\PHD@Specialite}
+\vspace*{1em}}
+
+% Department and University
+{\usebox{\PHD@dept}}
+\vspace*{2em}
 
 % Author
 {\usebox{\PHD@author}}
 \vspace*{1em}
+
+% Submission Text
+{\usebox{\PHD@submission}}
+\vspace*{2em}
+
+% Title
+{\usebox{\PHD@Title}} % subtitle is defined
+\vspace*{2em}
+
+{\usebox{\PHD@defensedate}}
+\vspace*{0.5em}
+
+%Jury members
+{\usebox{\PHD@jury}}
 
 % Supervisor
 \ifPHD@supervisor%
@@ -975,16 +1029,13 @@ wish to left align your text}
 \vspace*{0.5em}
 \fi
 
-% Department and University
-{\usebox{\PHD@dept}}
-\vspace{.2\PHD@titlepagespacing}
 
-% Submission Text
-{\usebox{\PHD@submission}}
+
+
 
 % College and degree date
-\vfill
-{\usebox{\PHD@collegedate}}
+%\vfill
+%{\usebox{\PHD@collegedate}}
     
 \end{center}
 
@@ -1137,6 +1188,13 @@ wish to left align your text}
 \fi
 }
 
+\newenvironment{abstract_fr} {
+  \cleardoublepage
+  \setsinglecolumn
+  \chapter*{\centering \Large Résumé}
+  \thispagestyle{empty}
+}
+
 
 % ******************** To compute empty space in title page *******************
 % Boxes below are used to space different contents on the title page
@@ -1144,17 +1202,48 @@ wish to left align your text}
 
 \newcommand{\computeTitlePageSpacing}{
 
+% Prefix
+\newsavebox{\PHD@ThesisPrefix}
+\begin{lrbox}{\PHD@ThesisPrefix}
+  \begin{minipage}[c]{0.98\textwidth}
+    \centering \bfseries{THÈSE DE DOCTORAT DE}
+    \\
+    \centering \bfseries{\@university}
+  \end{minipage}
+\end{lrbox}
+
+% Spécialité
+\newsavebox{\PHD@Specialite}
+\begin{lrbox}{\PHD@Specialite}
+  \begin{minipage}[c]{0.98\textwidth}
+    \centering Spécialité
+    \\
+    \centering \bfseries{\@specialite}
+  \end{minipage}
+\end{lrbox}
+
+% Department Box
+\newsavebox{\PHD@dept}
+\begin{lrbox}{\PHD@dept}
+  \begin{minipage}[c]{\textwidth}
+    \centering 
+    {\@lab \par}
+    {\@dept \par}
+	       %{\large \@university \par}
+  \end{minipage}
+\end{lrbox}
 
 % Title Box
 \newsavebox{\PHD@Title}
 \begin{lrbox}{\PHD@Title}
   \begin{minipage}[c]{0.98\textwidth}
-    \centering \Huge \bfseries{\@title}
+    \centering {Sujet de la thèse : \par}
+    \large \bfseries{\@title}
     \ifthenelse{\equal{\@subtitle}{}}{
       % subtitle is not defined
     }{
       \\
-      \centering \Large {\@subtitle}
+      \centering \normalsize \textit{\@subtitle}
     } % subtitle is defined
   \end{minipage}
 \end{lrbox}
@@ -1162,7 +1251,23 @@ wish to left align your text}
 % University Crest Box
 \newsavebox{\PHD@crest}
 \begin{lrbox}{\PHD@crest}
-  {\@crest \par}
+  \begin{minipage}{0.24\textwidth}
+    \centering
+    {\@firstlogo}
+  \end{minipage}
+  \begin{minipage}{0.1\textwidth}
+    \centering
+    {\@secondlogo}
+  \end{minipage}
+  \begin{minipage}{0.35\textwidth}
+    \centering
+    {\@thirdlogo}
+  \end{minipage}
+  \begin{minipage}{0.30\textwidth}
+    \centering
+    {\@fourthlogo}
+  \end{minipage}
+  {\par}
 \end{lrbox}
 
 \newsavebox{\PHD@collegecrest}
@@ -1178,10 +1283,54 @@ wish to left align your text}
 \newsavebox{\PHD@author}
 \begin{lrbox}{\PHD@author}
   \begin{minipage}[c]{\textwidth}
-    \centering \Large \bfseries{\@author}
+    \centering 
+      Présentée par
+      \\
+      \large \bfseries{\@author}
       \vspace{0.5em}   
   \end{minipage}
 \end{lrbox}
+
+% Defense Date
+\newsavebox{\PHD@defensedate}
+\begin{lrbox}{\PHD@defensedate}
+  \begin{minipage}[c]{\textwidth}
+    \raggedright soutenue le {\@degreedate}
+  \end{minipage}
+\end{lrbox}
+
+\newsavebox{\PHD@jury}
+\begin{lrbox}{\PHD@jury}
+  \begin{minipage}[c]{\textwidth}
+    \raggedright {devant le jury composé de :}
+    \\
+    \resettabtoks
+    \foreach \n in {1,...,\@njurymembers} {%
+      \-\hspace{0.7cm}
+      \eaddtabtoks{ {\csname @juryTitle\n\endcsname} }
+      \eaddtabtoks{ {\csname @juryName\n \endcsname} }
+      \addtabtoks{ & }
+      %\eaddtabtoks{{\csname @juryPosition\n \endcsname } }
+      %\addtabtoks{ & }
+      \eaddtabtoks{{\csname @juryAffiliation\n \endcsname } }
+      \addtabtoks{ & }
+      \eaddtabtoks{{\csname @juryFunction\n \endcsname } }
+      \addtabtoks{ \\ }
+    }%
+    \ifnum \@njurymembers=0
+      Jury members
+    \else
+      \vspace*{-2em}
+      \begin{center}
+        \begin{tabular}{m{0.25\textwidth}m{0.5\textwidth}m{0.25\textwidth}} 
+          \printtabtoks
+        \end{tabular}
+      \end{center}
+    \fi
+  \end{minipage}
+\end{lrbox}
+
+
 
 % Supervisor Box
 \newsavebox{\PHD@supervisor}
@@ -1219,47 +1368,38 @@ wish to left align your text}
   \end{minipage}
 \end{lrbox}
 
-% Department Box
-\newsavebox{\PHD@dept}
-\begin{lrbox}{\PHD@dept}
-  \begin{minipage}[c]{\textwidth}
-    \centering {\large \@dept \par}
-	       {\large \@university \par}
-  \end{minipage}
-\end{lrbox}
-
 % Submission Box
 \newsavebox{\PHD@submission}
 \begin{lrbox}{\PHD@submission}
   \begin{minipage}[c]{\textwidth}
     \begin{center}
-      \large \submissiontext \par
-      \large \textit {\@degreetitle} \par
+      \submissiontext \par
+      \bfseries{\@degreetitle{} de \@university} \par
     \end{center}
   \end{minipage}
 \end{lrbox}
 
 % College and Date Box
-\newsavebox{\PHD@collegedate}
-\begin{lrbox}{\PHD@collegedate}
-\begin{minipage}[c]{\textwidth}
-  \large
-  \ifthenelse{\equal{\@college}{}}{
-    % college is not defined
-    \begin{center}
-      \@degreedate
-    \end{center}
-  }{
-    % college is defined
-    \begin{minipage}[b]{0.49\textwidth}
-      \flushleft\@college
-    \end{minipage}
-    \begin{minipage}[b]{0.49\textwidth}
-      \flushright \@degreedate
-    \end{minipage}
-  } % college is defined
-\end{minipage}
-\end{lrbox}
+%\newsavebox{\PHD@collegedate}
+%\begin{lrbox}{\PHD@collegedate}
+%\begin{minipage}[c]{\textwidth}
+%  \large
+%  \ifthenelse{\equal{\@college}{}}{
+%    % college is not defined
+%    \begin{center}
+%      \@degreedate
+%    \end{center}
+%  }{
+%    % college is defined
+%    \begin{minipage}[b]{0.49\textwidth}
+%      \flushleft\@college
+%    \end{minipage}
+%    \begin{minipage}[b]{0.49\textwidth}
+%      \flushright \@degreedate
+%    \end{minipage}
+%  } % college is defined
+%\end{minipage}
+%\end{lrbox}
 
 %  Now to compute the free vertical space
 \newlength{\PHD@titlepagespacing}
@@ -1272,7 +1412,8 @@ wish to left align your text}
                    	- \totalheightof{\usebox{\PHD@advisor}}
 			- \totalheightof{\usebox{\PHD@dept}}
 			- \totalheightof{\usebox{\PHD@submission}}
-			- \totalheightof{\usebox{\PHD@collegedate}}
+			%- \totalheightof{\usebox{\PHD@collegedate}}
 }
 }
+
 
